@@ -133,10 +133,6 @@ def end_game():
     global game_over
     game_over = True
 
-def draw_text():
-    global game_over
-    game_over = True
-
 def draw_text(x, y, text, font = GLUT_BITMAP_HELVETICA_18): # type: ignore
     glColor3f(1, 1, 1)
     glMatrixMode(GL_PROJECTION)
@@ -293,19 +289,6 @@ def keyboardListener(key, x, y):
 
 def specialKeyListener(key, x, y):
     global camera_position
-    if key == GLUT_KEY_UP:
-        z += 10  
-        if z > 800:
-            z = 800  
-    if key == GLUT_KEY_DOWN:
-        z -= 10 
-        if z < 100:
-            z = 100  
-    if key == GLUT_KEY_LEFT:
-        x -= 10  
-    if key == GLUT_KEY_RIGHT:
-        x += 10  
-    camera_position = (x, y, z)
     x, y, z = camera_position
     if key == GLUT_KEY_UP:
         z += 10  
