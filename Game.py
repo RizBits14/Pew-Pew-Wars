@@ -190,3 +190,201 @@ def draw_grid():
     glVertex3f(-GRID_LENGTH, GRID_LENGTH, 100)
     glVertex3f(-GRID_LENGTH, -GRID_LENGTH, 100)
     glEnd()
+
+def draw_player():
+    glPushMatrix()
+    glTranslatef(player_position[0], player_position[1], player_position[2])
+    glRotatef(gun_angle, 0, 0, 1)
+    if game_over == True:
+        glRotatef(90, 1, 0, 0)
+    glColor3f(0.2, 0.4, 0.8)
+    gluSphere(gluNewQuadric(), 30, 20, 20)
+    glColor3f(0.3, 0.3, 0.3)
+    glTranslatef(0, 0, 30)
+    glutSolidCube(gun_size * 0.5)
+    glColor3f(0.0, 0.0, 0.0)
+    glPushMatrix()
+    glTranslatef(70, 0, 0)
+    glColor3f(0.0, 0.0, 0.0)
+    glutSolidSphere(5, 10, 10)
+    glPopMatrix()
+    glRotatef(90, 0, 1, 0)
+    gluCylinder(gluNewQuadric(), 10, 10, 70, 10, 10)
+    glPopMatrix()
+
+def gun_barrel():
+    angle_radian = math.radians(gun_angle)
+    barrel_length = 70
+    barrel_height = 30
+    return [
+        player_position[0] + barrel_length * math.cos(angle_radian),
+        player_position[1] + barrel_length * math.sin(angle_radian),
+        player_position[2] + barrel_height
+    ]
+
+def draw_bullets():
+    for bullet in bullets_list:
+        glPushMatrix()
+        glTranslatef(bullet['position'][0], bullet['position'][1], bullet['position'][2])
+        glColor3f(1.0, 0.7, 0)
+        glutSolidCube(20)
+        glPopMatrix()
+
+def draw_enemies():
+    for enemy in enemies_list:
+        glPushMatrix()
+        glTranslatef(enemy['position'][0], enemy['position'][1], enemy['position'][2])
+        glScalef(enemy['scale'], enemy['scale'], enemy['scale'])
+        glColor3f(0.8, 0.2, 0.2)
+        gluSphere(gluNewQuadric(), 40, 20, 20)
+        glColor3f(0.9, 0.9, 0.9)
+        glTranslatef(0, 0, 30)
+        gluSphere(gluNewQuadric(), 15, 10, 10)
+        glPopMatrix()
+
+def draw_shapes():
+    draw_grid()
+    draw_player()
+    draw_bullets()
+    draw_enemies()
+
+def keyboardListener(key, x, y):
+    global player_position, gun_angle, game_over
+    if game_over and key == b'r':
+        init_game()
+        return
+    if game_over == True:
+        return
+    if key == b'a':
+        angle_radian = math.radians(gun_angle)
+        player_position[0] += math.cos(angle_radian) * 10
+        player_position[1] += math.sin(angle_radian) * 10
+    if key == b'd':
+        angle_radian = math.radians(gun_angle)
+        player_position[0] -= math.cos(angle_radian) * 10
+        player_position[1] -= math.sin(angle_radian) * 10
+    if key == b's':
+        angle_radian = math.radians(gun_angle + 90)
+        player_position[0] += math.cos(angle_radian) * 10
+        player_position[1] += math.sin(angle_radian) * 10
+    if key == b'w':
+        angle_radian = math.radians(gun_angle - 90)
+        player_position[0] += math.cos(angle_radian) * 10
+        player_position[1] += math.sin(angle_radian) * 10
+    if key == b'q':
+        gun_angle += 5 
+        if gun_angle >= 360:
+            gun_angle -= 360
+    if key == b'e':
+        gun_angle -= 5 
+        if gun_angle < 0:
+            gun_angle += 360
+    player_position[0] = max(-GRID_LENGTH + 50, min(GRID_LENGTH - 50, player_position[0]))
+    player_position[1] = max(-GRID_LENGTH + 50, min(GRID_LENGTH - 50, player_position[1]))
+
+def specialKeyListener(key, x, y):
+    global camera_position
+    if key == GLUT_KEY_UP:
+        z += 10  
+        if z > 800:
+            z = 800  
+    if key == GLUT_KEY_DOWN:
+        z -= 10 
+        if z < 100:
+            z = 100  
+    if key == GLUT_KEY_LEFT:
+        x -= 10  
+    if key == GLUT_KEY_RIGHT:
+        x += 10  
+    camera_position = (x, y, z)
+    x, y, z = camera_position
+    if key == GLUT_KEY_UP:
+        z += 10  
+        if z > 800:
+            z = 800  
+    if key == GLUT_KEY_DOWN:
+        z -= 10 
+        if z < 100:
+            z = 100  
+    if key == GLUT_KEY_LEFT:
+        x -= 10  
+    if key == GLUT_KEY_RIGHT:
+        x += 10  
+    camera_position = (x, y, z)
+
+def mouseListener(button, state, x, y):
+    global camera_follow_gun
+    if button == GLUT_LEFT_BUTTON and state == GLUT_DOWN and not game_over:
+        fire_bullet()
+        print("Bullet fired!")
+    if button == GLUT_RIGHT_BUTTON and state == GLUT_DOWN:
+        camera_follow_gun = not camera_follow_gun
+
+def setupCamera():
+    global camera_position, player_position, gun_angle, camera_follow_gun
+    glMatrixMode(GL_PROJECTION)
+    glLoadIdentity() 
+    gluPerspective(120, 1.25, 0.1, 1500)
+    glMatrixMode(GL_MODELVIEW) 
+    glLoadIdentity()
+    if camera_follow_gun:
+        angle_radian = math.radians(gun_angle)
+        lookAtX = player_position[0] + 100 * math.cos(angle_radian)
+        lookAtY = player_position[1] + 100 * math.sin(angle_radian)
+        eyeX = player_position[0] - 30 * math.cos(angle_radian)
+        eyeY = player_position[1] - 30 * math.sin(angle_radian)
+        eyeZ = player_position[2] + 50
+        gluLookAt(eyeX, eyeY, eyeZ, lookAtX, lookAtY, player_position[2],0, 0, 1)
+    else:
+        x, y, z = camera_position
+        radius = math.sqrt(x*x + y*y)
+        angle = math.atan2(y, x)
+        eyeX = radius * math.cos(angle)
+        eyeY = radius * math.sin(angle)
+        eyeZ = z
+        gluLookAt(eyeX, eyeY, eyeZ, 0, 0, 0, 0, 0, 1)
+
+def update_game():
+    global animation
+    if game_over == True:
+        return
+    animation += animation
+    update_bullets()
+    update_enemies()
+
+def idle():
+    update_game()
+    glutPostRedisplay()
+
+def showScreen():
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+    glLoadIdentity()
+    glViewport(0, 0, 1000, 800)
+    glEnable(GL_DEPTH_TEST)
+    setupCamera()
+    draw_shapes()
+    draw_text(10, 770, f"Score: {game_score}")
+    draw_text(10, 740, f"Life: {player_life}")
+    draw_text(10, 710, f"Bullets Missed: {bullets_missed}/10")
+    if camera_follow_gun == True:
+        draw_text(10, 680, "FIRST-PERSON VIEW")
+    if game_over == True:
+        draw_text(400, 400, "GAME OVER")
+        draw_text(350, 370, "Press 'R' to restart")
+    glutSwapBuffers()
+
+glutInit()
+glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH)
+glutInitWindowSize(1000, 800)
+glutInitWindowPosition(0, 0)
+wind = glutCreateWindow(b"Bullet Frenzy - 3D Game")
+
+init_game()
+glEnable(GL_DEPTH_TEST)
+glEnable(GL_COLOR_MATERIAL)
+glutDisplayFunc(showScreen)
+glutKeyboardFunc(keyboardListener)
+glutSpecialFunc(specialKeyListener)
+glutMouseFunc(mouseListener)
+glutIdleFunc(idle)
+glutMainLoop()
