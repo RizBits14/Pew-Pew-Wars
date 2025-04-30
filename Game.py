@@ -10,6 +10,8 @@ game_score = 0
 player_life = 5
 bullets_missed = 0
 game_over = False
+cheat_mode = False
+auto_follow = False
 
 camera_position = (0, 600, 600)
 camera_follow_gun = False
@@ -28,7 +30,7 @@ NUM_ENEMIES = 5
 animation = 0
 
 def init_game():
-    global player_position, gun_angle, game_over, game_score, player_life, bullets_missed, bullets_list, enemies_list
+    global player_position, gun_angle, game_over, game_score, player_life, bullets_missed, bullets_list, enemies_list, cheat_mode, auto_follow
     player_position = [0, 0, 0]
     gun_angle = 0
     game_over = False
@@ -37,6 +39,8 @@ def init_game():
     bullets_missed = 0
     bullets_list = []
     enemies_list = []
+    cheat_mode = False
+    auto_follow = False
     for i in range(NUM_ENEMIES):
         spawn_enemy()
 
@@ -249,12 +253,16 @@ def draw_shapes():
     draw_enemies()
 
 def keyboardListener(key, x, y):
-    global player_position, gun_angle, game_over
+    global player_position, gun_angle, game_over, cheat_mode, auto_follow
     if game_over and key == b'r':
         init_game()
         return
     if game_over == True:
         return
+    if key == b'c':
+        cheat_mode = not cheat_mode
+    if key == b'v':
+        auto_follow = not auto_follow
     if key == b'a':
         angle_radian = math.radians(gun_angle)
         player_position[0] += math.cos(angle_radian) * 10
@@ -271,14 +279,15 @@ def keyboardListener(key, x, y):
         angle_radian = math.radians(gun_angle - 90)
         player_position[0] += math.cos(angle_radian) * 10
         player_position[1] += math.sin(angle_radian) * 10
-    if key == b'q':
-        gun_angle += 5 
-        if gun_angle >= 360:
-            gun_angle -= 360
-    if key == b'e':
-        gun_angle -= 5 
-        if gun_angle < 0:
-            gun_angle += 360
+    if not cheat_mode:
+        if key == b'q':
+            gun_angle += 5 
+            if gun_angle >= 360:
+                gun_angle -= 360
+        if key == b'e':
+            gun_angle -= 5 
+            if gun_angle < 0:
+                gun_angle += 360
     player_position[0] = max(-GRID_LENGTH + 50, min(GRID_LENGTH - 50, player_position[0]))
     player_position[1] = max(-GRID_LENGTH + 50, min(GRID_LENGTH - 50, player_position[1]))
 
@@ -321,13 +330,13 @@ def mouseListener(button, state, x, y):
         camera_follow_gun = not camera_follow_gun
 
 def setupCamera():
-    global camera_position, player_position, gun_angle, camera_follow_gun
+    global camera_position, player_position, gun_angle, camera_follow_gun, auto_follow
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity() 
     gluPerspective(120, 1.25, 0.1, 1500)
     glMatrixMode(GL_MODELVIEW) 
     glLoadIdentity()
-    if camera_follow_gun:
+    if camera_follow_gun or (cheat_mode and auto_follow):
         angle_radian = math.radians(gun_angle)
         lookAtX = player_position[0] + 100 * math.cos(angle_radian)
         lookAtY = player_position[1] + 100 * math.sin(angle_radian)
@@ -345,12 +354,26 @@ def setupCamera():
         gluLookAt(eyeX, eyeY, eyeZ, 0, 0, 0, 0, 0, 1)
 
 def update_game():
-    global animation
+    global animation, gun_angle
     if game_over == True:
         return
     animation += animation
     update_bullets()
     update_enemies()
+    if cheat_mode:
+        gun_angle += 2
+        if gun_angle >= 360:
+            gun_angle -= 360
+        for enemy in enemies_list:
+            dx = enemy['position'][0] - player_position[0]
+            dy = enemy['position'][1] - player_position[1]
+            distance = math.sqrt(dx**2 + dy**2)
+            if distance > 0:
+                enemy_angle = math.degrees(math.atan2(dy, dx))
+                if enemy_angle < 0:
+                    enemy_angle += 360
+                if abs(enemy_angle - gun_angle) < 5:
+                    fire_bullet()
 
 def idle():
     update_game()
@@ -366,8 +389,10 @@ def showScreen():
     draw_text(10, 770, f"Score: {game_score}")
     draw_text(10, 740, f"Life: {player_life}")
     draw_text(10, 710, f"Bullets Missed: {bullets_missed}/10")
-    if camera_follow_gun == True:
+    if camera_follow_gun == True or (cheat_mode and auto_follow):
         draw_text(10, 680, "FIRST-PERSON VIEW")
+    if cheat_mode:
+        draw_text(10, 650, "CHEAT MODE ACTIVE")
     if game_over == True:
         draw_text(400, 400, "GAME OVER")
         draw_text(350, 370, "Press 'R' to restart")
@@ -377,7 +402,7 @@ glutInit()
 glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH)
 glutInitWindowSize(1000, 800)
 glutInitWindowPosition(0, 0)
-wind = glutCreateWindow(b"Bullet Frenzy - 3D Game")
+wind = glutCreateWindow(b"Pew Pew Wars")
 
 init_game()
 glEnable(GL_DEPTH_TEST)
